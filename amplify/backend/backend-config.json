@@ -1,30 +1,44 @@
 {
   "auth": {
     "playerjwtcognito5d5d2eb2": {
-      "service": "Cognito",
-      "providerPlugin": "awscloudformation",
-      "dependsOn": [],
       "customAuth": false,
+      "dependsOn": [],
       "frontendAuthConfig": {
-        "socialProviders": [],
-        "usernameAttributes": [
-          "EMAIL"
-        ],
-        "signupAttributes": [
-          "EMAIL"
-        ],
-        "passwordProtectionSettings": {
-          "passwordPolicyMinLength": 8,
-          "passwordPolicyCharacters": []
-        },
         "mfaConfiguration": "OFF",
         "mfaTypes": [
           "SMS"
         ],
+        "passwordProtectionSettings": {
+          "passwordPolicyCharacters": [],
+          "passwordPolicyMinLength": 8
+        },
+        "signupAttributes": [
+          "EMAIL"
+        ],
+        "socialProviders": [],
+        "usernameAttributes": [],
         "verificationMechanisms": [
           "EMAIL"
         ]
-      }
+      },
+      "providerPlugin": "awscloudformation",
+      "service": "Cognito"
+    }
+  },
+  "custom": {
+    "customResource2bc9d7e6": {
+      "dependsOn": [
+        {
+          "attributes": [
+            "BucketName",
+            "Region"
+          ],
+          "category": "storage",
+          "resourceName": "s3aacf1077"
+        }
+      ],
+      "providerPlugin": "awscloudformation",
+      "service": "customCDK"
     }
   },
   "function": {
@@ -34,6 +48,29 @@
       "service": "Lambda"
     }
   },
-  "api": {},
-  "video": {}
+  "parameters": {
+    "AMPLIFY_function_jwtauth_deploymentBucketName": {
+      "usedBy": [
+        {
+          "category": "function",
+          "resourceName": "jwtauth"
+        }
+      ]
+    },
+    "AMPLIFY_function_jwtauth_s3Key": {
+      "usedBy": [
+        {
+          "category": "function",
+          "resourceName": "jwtauth"
+        }
+      ]
+    }
+  },
+  "storage": {
+    "s3aacf1077": {
+      "dependsOn": [],
+      "providerPlugin": "awscloudformation",
+      "service": "S3"
+    }
+  }
 }

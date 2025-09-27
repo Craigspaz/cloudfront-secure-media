@@ -1,0 +1,10 @@
+{
+  "cloudfront": {
+    "distributionUrl": "https://dqpb1dewxu1ee.cloudfront.net",
+    "demoVideoUrl": "https://dqpb1dewxu1ee.cloudfront.net/big_buck_bunny.m3u8"
+  },
+  "s3": {
+    "bucketName": "cloudfrontsecurecd7986de36c64c838eaae45ee9e174fba248-dev"
+  },
+  "updatedAt": "2025-09-27T02:25:53.758Z"
+}

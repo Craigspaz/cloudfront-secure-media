@@ -3,13 +3,9 @@
 
 import React, { useEffect, useState } from "react";
 import "./App.css";
-import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
-import Nav from "react-bootstrap/Nav";
-import Navbar from "react-bootstrap/Navbar";
-import Container from "react-bootstrap/Container";
 import Home from "./Home";
-import Amplify from "@aws-amplify/core";
-import Auth from "@aws-amplify/auth";
+import { Amplify } from "aws-amplify";
+import { getCurrentUser, signOut as amplifySignOut, fetchAuthSession } from "aws-amplify/auth";
 import { withAuthenticator } from "@aws-amplify/ui-react";
 import awsmobile from "../aws-exports";
 import "@aws-amplify/ui-react/styles.css";
@@ -19,60 +15,58 @@ Amplify.configure(awsmobile);
 function App(props) {
   const [username, setUsername] = useState();
   const [token, setToken] = useState();
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     (async function () {
       try {
-        await Auth.currentSession({ bypassCache: false }).then((session) => {
-          console.log(
-            "User name",
-            session.accessToken.payload.username
-            //session.accessToken.jwtToken // for Debug
-          );
-          setUsername(session.accessToken.payload.username);
-          setToken(session.accessToken.jwtToken);
-        });
+        const session = await fetchAuthSession();
+        const user = await getCurrentUser();
+        setUsername(user.username);
+        setToken(session.tokens.accessToken.toString());
       } catch (e) {
-        console.error("Error, no logeeed user ", e);
+        console.error("Error, no logged user ", e);
+      } finally {
+        setLoading(false);
       }
     })();
-    console.log("Simple Player JWT Mounted");
-  }, [username, token]);
+  }, []);
 
   const signOut = async () => {
     try {
-      await Auth.signOut();
+      await amplifySignOut();
       window.location.reload();
     } catch (err) {
       console.log("error signing out: ", err);
     }
   };
 
-  return username ? (
-    <Router>
-      <div className="App">
-        <Navbar bg="dark" variant="dark">
-          <Container>
-            <Navbar.Brand href="/">Simple Player</Navbar.Brand>
-            <Nav>
-              <Nav.Link>
-                <Link to={"/"} className="nav-link" onClick={signOut}>
-                  Logout
-                </Link>
-              </Nav.Link>
-            </Nav>
-          </Container>
-        </Navbar>
-        <Routes>
-          <Route
-            index
-            element={<Home username={username} token={token} {...props} />}
-          />
-        </Routes>
+  if (loading || !username || !token) {
+    return (
+      <div className="d-flex justify-content-center align-items-center min-vh-100">
+        <div className="spinner-border text-primary" role="status">
+          <span className="visually-hidden">Loading...</span>
+        </div>
       </div>
-    </Router>
-  ) : (
-    <div>Loading...</div>
+    );
+  }
+
+  return (
+    <div className="App">
+      <nav className="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div className="container">
+          <span className="navbar-brand">🔒 Secure Media Player</span>
+          <div className="navbar-nav ms-auto">
+            <span className="navbar-text me-3">Welcome, {username}</span>
+            <button className="btn btn-outline-light btn-sm" onClick={signOut}>
+              Sign Out
+            </button>
+          </div>
+        </div>
+      </nav>
+      <Home username={username} token={token} onSignOut={signOut} {...props} />
+    </div>
   );
 }
+
 export default withAuthenticator(App);

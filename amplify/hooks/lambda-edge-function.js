@@ -1,4 +1,5 @@
-const crypto = require('crypto');
+const jwt = require('jsonwebtoken');
+const jwksClient = require('jwks-rsa');
 
 // Configuration will be injected here
 var config = {};
@@ -8,21 +9,12 @@ config.JWKS = '{"keys":[{"alg":"RS256","e":"AQAB","kid":"ZnHi7X8VISH3ICCq4mTHx8V
 
 const jwks = JSON.parse(config.JWKS);
 
-// Helper function to decode base64url
-function base64urlDecode(str) {
-    // Convert base64url to base64
-    str = str.replace(/-/g, '+').replace(/_/g, '/');
-    // Add padding if needed
-    while (str.length % 4) {
-        str += '=';
-    }
-    return Buffer.from(str, 'base64');
-}
-
 exports.handler = (event, context, callback) => {
     console.log('getting started');
     
     const request = event.Records[0].cf.request;
+    const headers = request.headers;
+    
     console.log('cfrequest=', request);
     
     // Get token from query string
@@ -43,38 +35,28 @@ exports.handler = (event, context, callback) => {
     console.log('jwtToken=' + jwtToken);
     
     try {
-        // Simple JWT validation using built-in crypto
-        const parts = jwtToken.split('.');
-        if (parts.length !== 3) {
-            throw new Error('Invalid token format');
+        // Decode token without verification first
+        const decoded = jwt.decode(jwtToken, { complete: true });
+        console.log('Decoded Token', decoded);
+        
+        if (!decoded || !decoded.header || !decoded.header.kid) {
+            throw new Error('Invalid token structure');
         }
         
-        const header = JSON.parse(base64urlDecode(parts[0]).toString());
-        const payload = JSON.parse(base64urlDecode(parts[1]).toString());
-        const signature = parts[2];
-        
-        console.log('Decoded Token', { header, payload });
-        
         // Find the key
-        const key = jwks.keys.find(k => k.kid === header.kid);
+        const key = jwks.keys.find(k => k.kid === decoded.header.kid);
         if (!key) {
             throw new Error('Key not found');
         }
         
-        // Skip signature verification for now - just validate structure and expiration
-        console.log('Skipping signature verification - validating structure only');
+        // Convert JWK to PEM
+        const publicKey = jwkToPem(key);
         
-        // Check expiration
-        const now = Math.floor(Date.now() / 1000);
-        if (payload.exp && payload.exp < now) {
-            throw new Error('Token expired');
-        }
-        
-        // Check issuer
-        const expectedIssuer = `https://cognito-idp.${config.REGION}.amazonaws.com/${config.USERPOOLID}`;
-        if (payload.iss !== expectedIssuer) {
-            throw new Error('Invalid issuer');
-        }
+        // Verify token
+        const verified = jwt.verify(jwtToken, publicKey, {
+            algorithms: ['RS256'],
+            issuer: `https://cognito-idp.${config.REGION}.amazonaws.com/${config.USERPOOLID}`
+        });
         
         console.log('Successful verification');
         
@@ -95,21 +77,25 @@ exports.handler = (event, context, callback) => {
 
 function jwkToPem(jwk) {
     const { n, e } = jwk;
-    const modulus = base64urlDecode(n);
-    const exponent = base64urlDecode(e);
+    const modulus = Buffer.from(n, 'base64');
+    const exponent = Buffer.from(e, 'base64');
     
+    // Simple RSA public key construction
     const modulusLength = modulus.length;
     const exponentLength = exponent.length;
     
     let offset = 0;
-    const buffer = Buffer.alloc(1000);
+    const buffer = Buffer.alloc(1000); // Generous buffer
     
-    buffer[offset++] = 0x30;
+    // ASN.1 structure for RSA public key
+    buffer[offset++] = 0x30; // SEQUENCE
+    
     const lengthPos = offset++;
-    buffer[offset++] = 0x30;
-    buffer[offset++] = 0x0d;
-    buffer[offset++] = 0x06;
-    buffer[offset++] = 0x09;
+    
+    buffer[offset++] = 0x30; // SEQUENCE
+    buffer[offset++] = 0x0d; // Length
+    buffer[offset++] = 0x06; // OBJECT IDENTIFIER
+    buffer[offset++] = 0x09; // Length
     buffer[offset++] = 0x2a;
     buffer[offset++] = 0x86;
     buffer[offset++] = 0x48;
@@ -119,17 +105,18 @@ function jwkToPem(jwk) {
     buffer[offset++] = 0x01;
     buffer[offset++] = 0x01;
     buffer[offset++] = 0x01;
-    buffer[offset++] = 0x05;
-    buffer[offset++] = 0x00;
+    buffer[offset++] = 0x05; // NULL
+    buffer[offset++] = 0x00; // Length
     
-    buffer[offset++] = 0x03;
+    buffer[offset++] = 0x03; // BIT STRING
     const bitStringLengthPos = offset++;
-    buffer[offset++] = 0x00;
+    buffer[offset++] = 0x00; // Unused bits
     
-    buffer[offset++] = 0x30;
+    buffer[offset++] = 0x30; // SEQUENCE
     const innerSeqLengthPos = offset++;
     
-    buffer[offset++] = 0x02;
+    // Modulus
+    buffer[offset++] = 0x02; // INTEGER
     if (modulus[0] & 0x80) {
         buffer[offset++] = modulusLength + 1;
         buffer[offset++] = 0x00;
@@ -141,11 +128,13 @@ function jwkToPem(jwk) {
         offset += modulusLength;
     }
     
-    buffer[offset++] = 0x02;
+    // Exponent
+    buffer[offset++] = 0x02; // INTEGER
     buffer[offset++] = exponentLength;
     exponent.copy(buffer, offset);
     offset += exponentLength;
     
+    // Set lengths
     buffer[innerSeqLengthPos] = offset - innerSeqLengthPos - 1;
     buffer[bitStringLengthPos] = offset - bitStringLengthPos - 1;
     buffer[lengthPos] = offset - lengthPos - 1;

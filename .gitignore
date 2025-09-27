@@ -23,6 +23,8 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
+# Demo video files - exclude large source files but include HLS demo
+demo/video/source/
 
 #docs
 docs/
@@ -30,11 +32,17 @@ docs/
 #.gitignore
 package-lock.json
 
+amplify/team-provider-info.json
+amplify/backend/function/jwtauth/src/org.config.js.org
+amplify/backend/src/org.config.js.org
+amplify/backend/function/jwtauth/src/config.js
+
 #amplify-do-not-edit-begin
 amplify/\#current-cloud-backend
 amplify/.config/local-*
 amplify/logs
 amplify/mock-data
+amplify/mock-api-resources
 amplify/backend/amplify-meta.json
 amplify/backend/.temp
 build/
@@ -50,7 +58,3 @@ amplifytools.xcconfig
 .secret-*
 **.sample
 #amplify-do-not-edit-end
-amplify/team-provider-info.json
-amplify/backend/function/jwtauth/src/org.config.js.org
-amplify/backend/src/org.config.js.org
-amplify/backend/function/jwtauth/src/config.js

@@ -3,20 +3,23 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
-    "@aws-amplify/auth": "^4.5.2",
-    "@aws-amplify/core": "^4.5.2",
-    "@aws-amplify/ui-react": "^2.15.5",
-    "config": "^3.3.7",
-    "react": "^18.1.0",
-    "react-bootstrap": "^2.3.0",
-    "react-dom": "^18.1.0",
-    "react-router-dom": "^6.3.0",
+    "@aws-amplify/ui-react": "^6.3.0",
+    "aws-amplify": "^6.6.0",
+    "axios": "^1.12.2",
+    "config": "^3.3.9",
+    "react": "^18.3.1",
+    "react-bootstrap": "^2.10.4",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.26.2",
     "react-scripts": "5.0.1"
   },
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "post-deploy": "node scripts/update-frontend-config.js",
+    "upload-demo": "node scripts/upload-demo-video.js",
+    "deploy": "amplify push && amplify push && npm run post-deploy && npm run upload-demo"
   },
   "browserslist": {
     "production": [
