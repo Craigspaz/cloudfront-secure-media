@@ -1,11 +1,11 @@
 // Auto-generated deployment configuration
 export const deploymentConfig = {
   "cloudfront": {
-    "distributionUrl": "https://dejw78y9cltqs.cloudfront.net",
-    "demoVideoUrl": "https://dejw78y9cltqs.cloudfront.net/big_buck_bunny.m3u8"
+    "distributionUrl": "https://d3qs328vojxsdy.cloudfront.net",
+    "demoVideoUrl": "https://d3qs328vojxsdy.cloudfront.net/big_buck_bunny.m3u8"
   },
   "s3": {
     "bucketName": "secure-media-904149973046-dev"
   },
-  "updatedAt": "2025-09-27T05:27:27.465Z"
+  "updatedAt": "2025-09-27T15:56:12.950Z"
 };

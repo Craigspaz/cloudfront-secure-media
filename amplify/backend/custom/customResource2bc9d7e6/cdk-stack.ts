@@ -60,15 +60,7 @@ export class cdkStack extends cdk.Stack {
           forwardedValues: {
             queryString: true,
             cookies: { forward: 'none' }
-          },
-          lambdaFunctionAssociations: [{
-            eventType: 'viewer-request',
-            lambdaFunction: `arn:aws:lambda:us-east-1:${cdk.Fn.ref('AWS::AccountId')}:function:amplify-cloudfrontsecure-${cdk.Fn.ref('env')}-e2aaf-functionjwtauth-MEYZ2DDOJF2Q-LambdaFunction`
-          }],
-          lambdaFunctionAssociations: [{
-            eventType: 'viewer-request',
-            lambdaFunction: `arn:aws:lambda:us-east-1:${cdk.Fn.ref('AWS::AccountId')}:function:amplify-cloudfrontsecure-${cdk.Fn.ref('env')}-${amplifyResourceProps?.dependencies?.function?.jwtauth?.arn?.split(':')[6]}`
-          }]
+          }
         }
       }
     });

@@ -31,8 +31,14 @@ try {
   console.log('⬆️  Uploading HLS files...');
   execSync(`aws s3 sync ${hlsDir} s3://${bucketName}/ --delete`, { stdio: 'inherit' });
 
+  // Get CloudFront distribution URL
+  const cloudfrontUrl = execSync(
+    `aws cloudformation describe-stacks --stack-name "${stackName}" --query "Stacks[0].Outputs[?OutputKey=='CloudFrontDistributionURL'].OutputValue" --output text`,
+    { encoding: 'utf8' }
+  ).trim();
+
   console.log('✅ Demo video uploaded successfully!');
-  console.log(`🎯 Video will be available at: https://[CLOUDFRONT-URL]/big_buck_bunny.m3u8`);
+  console.log(`🎯 Video will be available at: ${cloudfrontUrl}/big_buck_bunny.m3u8`);
 
 } catch (error) {
   console.error('❌ Failed to upload demo video:', error.message);
