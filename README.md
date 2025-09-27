@@ -91,8 +91,19 @@ npm run post-deploy   # Update frontend config
 npm run upload-demo   # Upload demo video
 ```
 
-## 🧹 Cleanup
+## 🧹 Cleanup (if needed)
+In case you want to tear down the setup and remove all resources:
 
+```sh
+npm run cleanup
+```
+
+This removes:
+- Lambda@Edge function (us-east-1)
+- IAM role for Lambda@Edge
+- All Amplify resources (Cognito, CloudFront, S3, Lambda)
+
+**Manual cleanup (if needed):**
 ```sh
 amplify delete
 ```

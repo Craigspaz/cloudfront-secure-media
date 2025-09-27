@@ -21,7 +21,8 @@
     "eject": "react-scripts eject",
     "post-deploy": "node scripts/update-frontend-config.js",
     "upload-demo": "node scripts/upload-demo-video.js",
-    "deploy": "amplify push && amplify push && npm run post-deploy && npm run upload-demo"
+    "deploy": "amplify push && amplify push && npm run post-deploy && npm run upload-demo",
+    "cleanup": "node scripts/cleanup-lambda-edge.js && amplify delete"
   },
   "browserslist": {
     "production": [
