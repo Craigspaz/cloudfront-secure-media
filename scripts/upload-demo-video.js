@@ -7,11 +7,11 @@ const path = require('path');
 console.log('📹 Uploading demo video to S3...');
 
 try {
-  // Get S3 bucket name from CloudFormation
+  // Get S3 bucket name from CDK stack
   const stackName = execSync(
-    'aws cloudformation describe-stacks --query "Stacks[?contains(StackName, \'storages3\')].StackName" --output text',
+    'aws cloudformation describe-stacks --query "Stacks[?contains(StackName, \'customResource\')].StackName" --output text',
     { encoding: 'utf8' }
-  ).trim();
+  ).trim().split('\t')[0];
 
   const bucketName = execSync(
     `aws cloudformation describe-stacks --stack-name "${stackName}" --query "Stacks[0].Outputs[?OutputKey=='BucketName'].OutputValue" --output text`,

@@ -17,17 +17,12 @@ export class cdkStack extends cdk.Stack {
       description: 'Current Amplify CLI env name',
     });
 
-    // Get S3 bucket from Amplify storage
-    const retVal: AmplifyDependentResourcesAttributes = AmplifyHelpers.addResourceDependency(this, 
-      amplifyResourceProps.category, 
-      amplifyResourceProps.resourceName, 
-      [
-        {category: "storage", resourceName: "s3aacf1077"},
-      ]
-    );
-
-    const bucketName = cdk.Fn.ref(retVal.storage.s3aacf1077.BucketName);
-    const bucket = s3.Bucket.fromBucketName(this, 'MediaBucket', bucketName);
+    // Create a temporary S3 bucket - will be replaced when storage is added
+    const bucket = new s3.Bucket(this, 'MediaBucket', {
+      bucketName: `secure-media-${cdk.Fn.ref('AWS::AccountId')}-${cdk.Fn.ref('env')}`,
+      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+    });
 
     // Create Origin Access Control
     const oac = new cloudfront.CfnOriginAccessControl(this, 'MediaOAC', {
@@ -63,12 +58,33 @@ export class cdkStack extends cdk.Stack {
           viewerProtocolPolicy: 'redirect-to-https',
           cachePolicyId: '4135ea2d-6df8-44a3-9df3-4b5a84be39ad', // CachingOptimized
           forwardedValues: {
-            queryString: false,
+            queryString: true,
             cookies: { forward: 'none' }
-          }
+          },
+          lambdaFunctionAssociations: [{
+            eventType: 'viewer-request',
+            lambdaFunction: `arn:aws:lambda:us-east-1:${cdk.Fn.ref('AWS::AccountId')}:function:amplify-cloudfrontsecure-${cdk.Fn.ref('env')}-e2aaf-functionjwtauth-MEYZ2DDOJF2Q-LambdaFunction`
+          }],
+          lambdaFunctionAssociations: [{
+            eventType: 'viewer-request',
+            lambdaFunction: `arn:aws:lambda:us-east-1:${cdk.Fn.ref('AWS::AccountId')}:function:amplify-cloudfrontsecure-${cdk.Fn.ref('env')}-${amplifyResourceProps?.dependencies?.function?.jwtauth?.arn?.split(':')[6]}`
+          }]
         }
       }
     });
+
+    // Add bucket policy for CloudFront OAC access
+    bucket.addToResourcePolicy(new iam.PolicyStatement({
+      effect: iam.Effect.ALLOW,
+      principals: [new iam.ServicePrincipal('cloudfront.amazonaws.com')],
+      actions: ['s3:GetObject'],
+      resources: [bucket.arnForObjects('*')],
+      conditions: {
+        StringEquals: {
+          'AWS:SourceArn': `arn:aws:cloudfront::${cdk.Fn.ref('AWS::AccountId')}:distribution/${distribution.attrId}`,
+        },
+      },
+    }));
 
     // Output the distribution details
     new cdk.CfnOutput(this, 'CloudFrontDistributionId', {
@@ -84,6 +100,11 @@ export class cdkStack extends cdk.Stack {
     new cdk.CfnOutput(this, 'CloudFrontDistributionURL', {
       value: `https://${distribution.attrDomainName}`,
       description: 'CloudFront Distribution URL'
+    });
+
+    new cdk.CfnOutput(this, 'BucketName', {
+      value: bucket.bucketName,
+      description: 'S3 Bucket Name'
     });
   }
 }

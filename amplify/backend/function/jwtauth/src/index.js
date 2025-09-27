@@ -4,19 +4,20 @@ const config = require('./config');
 const iss = `https://cognito-idp.${config.REGION}.amazonaws.com/${config.USERPOOLID}`;
 const jwks = JSON.parse(config.JWKS);
 
-// Convert JWKS to PEMs dynamically
-const pems = {};
+// Convert JWKS to crypto.KeyObject instances
+const keys = {};
 jwks.keys.forEach(key => {
     if (key.kty === 'RSA') {
-        // Convert JWK to PEM format
-        const keyBuffer = Buffer.concat([
-            Buffer.from('3082010a0282010100', 'hex'),
-            Buffer.from(key.n, 'base64url'),
-            Buffer.from('0203', 'hex'),
-            Buffer.from(key.e, 'base64url')
-        ]);
-        const pem = `-----BEGIN PUBLIC KEY-----\n${keyBuffer.toString('base64').match(/.{1,64}/g).join('\n')}\n-----END PUBLIC KEY-----`;
-        pems[key.kid] = pem;
+        try {
+            // Create KeyObject directly from JWK
+            const keyObject = crypto.createPublicKey({
+                key: key,
+                format: 'jwk'
+            });
+            keys[key.kid] = keyObject;
+        } catch (err) {
+            console.log('Failed to create key for kid:', key.kid, err.message);
+        }
     }
 });
 
@@ -28,6 +29,8 @@ const response401 = {
 exports.handler = (event, context, callback) => {
     const cfrequest = event.Records[0].cf.request;
     const srcQuerystring = cfrequest.querystring;
+    
+    console.log('qurey pam=', 'token=' + (srcQuerystring.match(/token=([^&]*)/) || ['', 'none'])[1]);
 
     // Extract token from query string
     const tokenMatch = srcQuerystring.match(/token=([^&]*)/);
@@ -38,6 +41,7 @@ exports.handler = (event, context, callback) => {
     }
 
     const jwtToken = decodeURIComponent(tokenMatch[1]);
+    console.log('jwtToken=' + jwtToken);
 
     // Decode JWT token
     const parts = jwtToken.split('.');
@@ -49,6 +53,8 @@ exports.handler = (event, context, callback) => {
 
     const header = JSON.parse(base64urlDecode(parts[0]).toString());
     const payload = JSON.parse(base64urlDecode(parts[1]).toString());
+    
+    console.log('Decoded Token', { header, payload });
 
     // Validate issuer
     if (payload.iss !== iss) {
@@ -64,10 +70,10 @@ exports.handler = (event, context, callback) => {
         return false;
     }
 
-    // Get PEM for signature verification
+    // Get key for signature verification
     const kid = header.kid;
-    const pem = pems[kid];
-    if (!pem) {
+    const keyObject = keys[kid];
+    if (!keyObject) {
         console.log('Invalid access token - no matching key');
         callback(null, response401);
         return false;
@@ -79,7 +85,7 @@ exports.handler = (event, context, callback) => {
         verifier.update(parts[0] + '.' + parts[1]);
         
         const signatureBuffer = base64urlDecode(parts[2]);
-        const isValid = verifier.verify(pem, signatureBuffer);
+        const isValid = verifier.verify(keyObject, signatureBuffer);
         
         if (!isValid) {
             console.log('Token signature verification failed');
@@ -95,7 +101,7 @@ exports.handler = (event, context, callback) => {
             return false;
         }
 
-        console.log('Token verification successful');
+        console.log('Successful verification');
         
         // Remove token from query string for S3 request
         cfrequest.querystring = srcQuerystring.replace(/[?&]?token=[^&]*&?/, '').replace(/^&/, '');
@@ -104,7 +110,7 @@ exports.handler = (event, context, callback) => {
         return true;
 
     } catch (err) {
-        console.log('Token verification failed:', err.message);
+        console.log('Token failed verification', err.message);
         callback(null, response401);
         return false;
     }

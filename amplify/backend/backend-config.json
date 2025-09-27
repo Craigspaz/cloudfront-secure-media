@@ -27,16 +27,7 @@
   },
   "custom": {
     "customResource2bc9d7e6": {
-      "dependsOn": [
-        {
-          "attributes": [
-            "BucketName",
-            "Region"
-          ],
-          "category": "storage",
-          "resourceName": "s3aacf1077"
-        }
-      ],
+      "dependsOn": [],
       "providerPlugin": "awscloudformation",
       "service": "customCDK"
     }
@@ -64,13 +55,6 @@
           "resourceName": "jwtauth"
         }
       ]
-    }
-  },
-  "storage": {
-    "s3aacf1077": {
-      "dependsOn": [],
-      "providerPlugin": "awscloudformation",
-      "service": "S3"
     }
   }
 }

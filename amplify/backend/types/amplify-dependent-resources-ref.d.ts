@@ -12,6 +12,7 @@ export type AmplifyDependentResourcesAttributes = {
   },
   "custom": {
     "customResource2bc9d7e6": {
+      "BucketName": "string",
       "CloudFrontDistributionDomainName": "string",
       "CloudFrontDistributionId": "string",
       "CloudFrontDistributionURL": "string"
@@ -23,12 +24,6 @@ export type AmplifyDependentResourcesAttributes = {
       "LambdaExecutionRole": "string",
       "LambdaExecutionRoleArn": "string",
       "Name": "string",
-      "Region": "string"
-    }
-  },
-  "storage": {
-    "s3aacf1077": {
-      "BucketName": "string",
       "Region": "string"
     }
   }

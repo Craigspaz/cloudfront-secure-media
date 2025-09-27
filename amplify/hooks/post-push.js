@@ -5,6 +5,42 @@ async function deployLambdaEdge() {
   console.log("\n🚀 Deploying Lambda@Edge for JWT validation...");
   
   try {
+    // First, update the Lambda function config with Cognito details
+    console.log("📝 Updating Lambda function configuration...");
+    
+    // Get Cognito User Pool details
+    const authStackName = execSync(
+      'aws cloudformation describe-stacks --query "Stacks[?contains(StackName, \'authplayerjwtcognito\')].StackName" --output text',
+      { encoding: 'utf8' }
+    ).trim();
+    
+    const userPoolId = execSync(
+      `aws cloudformation describe-stacks --stack-name "${authStackName}" --query "Stacks[0].Outputs[?OutputKey=='UserPoolId'].OutputValue" --output text`,
+      { encoding: 'utf8' }
+    ).trim();
+    
+    const region = execSync('aws configure get region', { encoding: 'utf8' }).trim() || 'us-west-2';
+    
+    // Get JWKS from Cognito
+    const jwksUrl = `https://cognito-idp.${region}.amazonaws.com/${userPoolId}/.well-known/jwks.json`;
+    const jwks = execSync(`curl -s "${jwksUrl}"`, { encoding: 'utf8' });
+    
+    console.log("User Pool ID:", userPoolId);
+    console.log("Region:", region);
+    
+    // Update config.js file
+    const configPath = `${__dirname}/../backend/function/jwtauth/src/config.js`;
+    const configContent = `var config = {};
+
+config.REGION = '${region}';
+config.USERPOOLID = '${userPoolId}';
+config.JWKS = '${jwks.replace(/'/g, "\\'")}';
+
+module.exports = config;`;
+    
+    fs.writeFileSync(configPath, configContent);
+    console.log("✅ Lambda function configuration updated");
+    
     // Get the existing Amplify Lambda function code
     const functionStackName = execSync(
       'aws cloudformation describe-stacks --query "Stacks[?contains(StackName, \'functionjwtauth\')].StackName" --output text',
@@ -169,16 +205,16 @@ async function deployLambdaEdge() {
     };
 
     // Update distribution
-    const configPath = `${__dirname}/temp-distribution-config.json`;
-    fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+    const distributionConfigPath = `${__dirname}/temp-distribution-config.json`;
+    fs.writeFileSync(distributionConfigPath, JSON.stringify(config, null, 2));
 
     execSync(
-      `aws cloudfront update-distribution --id ${distributionId} --distribution-config file://${configPath} --if-match ${etag}`,
+      `aws cloudfront update-distribution --id ${distributionId} --distribution-config file://${distributionConfigPath} --if-match ${etag}`,
       { encoding: 'utf8' }
     );
 
     // Cleanup
-    fs.unlinkSync(configPath);
+    fs.unlinkSync(distributionConfigPath);
 
     console.log("✅ Lambda@Edge deployment completed!");
     console.log("⏳ CloudFront distribution is updating (this may take 10-15 minutes)");

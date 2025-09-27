@@ -43,7 +43,7 @@ amplify init
 ```
 - Project name: `cloudfront-secure-media`
 - Environment: `dev`
-- Editor: `Visual Studio Code`
+- Editor: `[your-editor]`
 - Framework: `react`
 - Source Directory: `src`
 - Distribution Directory: `build`

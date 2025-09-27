@@ -18,14 +18,9 @@ try {
     { encoding: 'utf8' }
   ).trim();
 
-  // Get S3 bucket name
-  const s3StackName = execSync(
-    'aws cloudformation describe-stacks --query "Stacks[?contains(StackName, \'storages3\')].StackName" --output text',
-    { encoding: 'utf8' }
-  ).trim();
-
+  // Get S3 bucket name from the same CDK stack
   const bucketName = execSync(
-    `aws cloudformation describe-stacks --stack-name "${s3StackName}" --query "Stacks[0].Outputs[?OutputKey=='BucketName'].OutputValue" --output text`,
+    `aws cloudformation describe-stacks --stack-name "${stackName}" --query "Stacks[0].Outputs[?OutputKey=='BucketName'].OutputValue" --output text`,
     { encoding: 'utf8' }
   ).trim();
 
