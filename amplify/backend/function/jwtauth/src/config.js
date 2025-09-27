@@ -1,6 +1,8 @@
+var config = {};
 
-  var config = {};
-  config.REGION = 'us-west-2'
-  config.USERPOOLID = 'us-west-2_gygYdW1OC'
-  config.JWKS = '{"keys":[{"alg":"RS256","e":"AQAB","kid":"ZnHi7X8VISH3ICCq4mTHx8VJJs738pOV2l/m3ukyE3U=","kty":"RSA","n":"tA4fs6Lr892dLuYhd7ph2OdY9JnlkNWe5TzO7nUIFQiHvdfOBn8kGz2wiaDJGsq1z6-dPrgYIiwe0iTTVxsTmRh70eG7iWknQuEkMuIP1UOFvP7kOuWTehphRtRFSPMOpBbNDmTKGmdtPTDmNG-Vc-A60aAqOwGDOKncUOU_TozgHMZNQ5TMWwk8ssovDxGHcsPeaOYzTFJXhJs66QSU4AQjMiGLKztjoDgfonw3ZJ-SKcpwqjWE8PtiHhSQ2k5QlZfq5wf36lhvWi6rhrcEVldOp9dTPr5Lgj4If6JPR39smxM17TdthOXhMULjkcHu2lQUEXs9rcu1WjuuYQ3yZQ","use":"sig"},{"alg":"RS256","e":"AQAB","kid":"Guu4CU/cEL+eC8R2eHDbaJ9SAR8jETCYoxBKazpEZDY=","kty":"RSA","n":"w3vJENQX-U94EgoreiAveuW8fTXrEHrP6RlJ9yovZ-slLWtSukcKVUSRfHFsdBcdAI-Nvk-iRf07jZ2zdnjl-s4_BcCPZZuCntyLjGRA-Im_3Iz2KpHCMzUeJhyYmoNNeNbEr2AMi44HQn2KppaEhnlLNl_nwKbLRDr5omTJk1gWrv8M-wJfqDetvGJVL5w3aosT1SlrQgnFlwdHBXH8qkrGtGkIxOFjOpp0-zIBvbXvzCYmLv2cJ2bVe6NCojbx70reJ4SuEE0vkhw6UaJRZFuGipU1Huey0ThwwJuDh6qzoBIjTlDXasmU_GqsCYFYagHjDVuu_vof21WUF8-KSw","use":"sig"}]}'
-  module.exports = config;
+// These values will be replaced during Amplify deployment
+config.REGION = 'REGION_PLACEHOLDER';
+config.USERPOOLID = 'USERPOOLID_PLACEHOLDER';
+config.JWKS = 'JWKS_PLACEHOLDER';
+
+module.exports = config;
