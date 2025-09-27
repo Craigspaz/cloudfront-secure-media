@@ -4,13 +4,13 @@
 import React, { useState, useRef, useEffect } from "react";
 import "./Home.css";
 import VideoPlayer from "./playerjs/";
+import DebugPanel from "./DebugPanel";
 import { deploymentConfig } from "../deployment-config";
 
 export default function Home(props) {
   const { username, token } = props;
   const playerRef = useRef(null);
 
-  // Use deployment config for default video URL, fallback to demo URL
   const defaultVideoURL = deploymentConfig?.cloudfront?.demoVideoUrl || 
     "https://daq51dk8vsgt8.cloudfront.net/big_buck_bunny.m3u8";
 
@@ -18,12 +18,19 @@ export default function Home(props) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [playerStatus, setPlayerStatus] = useState('ready');
   const [playerError, setPlayerError] = useState(null);
+  const [stats, setStats] = useState({
+    buffer: [],
+    bandwidth: [],
+    currentBitrate: 0,
+    droppedFrames: 0
+  });
   const [debugInfo, setDebugInfo] = useState({
     responseCode: null,
     responseHeaders: {},
     loadTime: null,
     error: null,
-    lastChecked: null
+    lastChecked: null,
+    cloudFrontUrl: deploymentConfig?.cloudfront?.distributionUrl || videoURL.split('/')[0] + '//' + videoURL.split('/')[2]
   });
 
   const videoJsOptions = {
@@ -47,7 +54,6 @@ export default function Home(props) {
     setDebugInfo(prev => ({ ...prev, responseCode: 'checking...' }));
     
     try {
-      // Check the URL the same way the video player does - with token as query parameter
       const urlWithToken = token ? `${url}?token=${token}` : url;
       const response = await fetch(urlWithToken, { 
         method: 'GET',
@@ -60,22 +66,24 @@ export default function Home(props) {
         headers[key] = value;
       });
 
-      setDebugInfo({
+      setDebugInfo(prev => ({
+        ...prev,
         responseCode: response.status,
         responseHeaders: headers,
         loadTime: loadTime,
         error: response.ok ? null : response.statusText,
         lastChecked: new Date().toLocaleTimeString()
-      });
+      }));
     } catch (error) {
       const loadTime = Date.now() - startTime;
-      setDebugInfo({
+      setDebugInfo(prev => ({
+        ...prev,
         responseCode: 'failed',
         responseHeaders: {},
         loadTime: loadTime,
         error: error.message,
         lastChecked: new Date().toLocaleTimeString()
-      });
+      }));
     }
   };
 
@@ -112,6 +120,59 @@ export default function Home(props) {
     player.on("canplay", () => {
       setPlayerStatus('ready');
     });
+    
+    // Fixed stats collection
+    const updateStats = () => {
+      if (player && !player.isDisposed()) {
+        try {
+          const buffered = player.buffered();
+          const currentTime = player.currentTime();
+          
+          let bufferLevel = 0;
+          if (buffered.length > 0) {
+            for (let i = 0; i < buffered.length; i++) {
+              if (currentTime >= buffered.start(i) && currentTime <= buffered.end(i)) {
+                bufferLevel = buffered.end(i) - currentTime;
+                break;
+              }
+            }
+          }
+          
+          // Fixed bitrate collection
+          let bandwidth = 0;
+          let currentBitrate = 0;
+          
+          if (player.tech() && player.tech().vhs) {
+            const vhs = player.tech().vhs;
+            bandwidth = vhs.bandwidth || 0;
+            
+            // Get actual current bitrate from active playlist
+            if (vhs.playlists && vhs.playlists.media()) {
+              const media = vhs.playlists.media();
+              currentBitrate = media.attributes?.BANDWIDTH || 0;
+            }
+            
+            // Fallback: try to get from stats
+            if (!currentBitrate && vhs.stats && vhs.stats.bandwidth) {
+              currentBitrate = vhs.stats.bandwidth;
+            }
+          }
+          
+          setStats(prev => ({
+            buffer: [...prev.buffer.slice(-19), bufferLevel],
+            bandwidth: [...prev.bandwidth.slice(-19), bandwidth / 1000],
+            currentBitrate: currentBitrate / 1000,
+            droppedFrames: 0
+          }));
+        } catch (error) {
+          console.log('Stats update error:', error);
+        }
+      }
+    };
+    
+    const statsInterval = setInterval(updateStats, 1000);
+    player.on('dispose', () => clearInterval(statsInterval));
+    
     playerRef.current = player;
   };
 
@@ -123,7 +184,6 @@ export default function Home(props) {
     }
   };
 
-  // Update video options when token changes
   useEffect(() => {
     if (playerRef.current && token) {
       playerRef.current.token = token;
@@ -188,65 +248,16 @@ export default function Home(props) {
             </div>
 
             {/* Debug Info Section */}
-            <div className="card shadow-lg control-card">
-              <div className="card-header text-white d-flex justify-content-between card-header-gradient">
-                <h6 className="mb-0">🔍 Debug Info</h6>
-                <small>User: {username}</small>
-              </div>
-              <div className="card-body p-3 debug-content">
-                <div className="mb-2">
-                  <span className={`badge ${isPlaying ? 'bg-success' : 'bg-secondary'} me-2`}>
-                    {playerStatus}
-                  </span>
-                  <span className="badge bg-light text-dark me-2">
-                    {debugInfo.responseCode}
-                  </span>
-                  <small>{debugInfo.loadTime ? `${debugInfo.loadTime}ms` : 'N/A'}</small>
-                </div>
-
-                {playerError && (
-                  <div className="mb-2">
-                    <small><strong>Player Error:</strong> <span className="text-danger">{playerError}</span></small>
-                  </div>
-                )}
-
-                <div className="mb-2">
-                  <small><strong>CloudFront:</strong> {deploymentConfig?.cloudfront?.distributionUrl || videoURL.split('/')[0] + '//' + videoURL.split('/')[2]}</small>
-                </div>
-
-                {debugInfo.error && (
-                  <div className="mb-2">
-                    <small><strong>Error:</strong> <span className="text-danger">{debugInfo.error}</span></small>
-                  </div>
-                )}
-
-                <details className="mb-2">
-                  <summary><small><strong>Headers</strong></small></summary>
-                  <div className="bg-light p-1 mt-1 headers-container">
-                    {Object.keys(debugInfo.responseHeaders).length > 0 ? 
-                      Object.entries(debugInfo.responseHeaders).map(([key, value]) => (
-                        <div key={key}><strong>{key}:</strong> {value}</div>
-                      )) : 'No headers'
-                    }
-                  </div>
-                </details>
-
-                <div>
-                  <div className="d-flex justify-content-between mb-1">
-                    <small><strong>JWT Token</strong></small>
-                    <button 
-                      className="btn btn-sm text-white btn-gradient-sm"
-                      onClick={() => copyToClipboard(token)}
-                    >
-                      📋
-                    </button>
-                  </div>
-                  <div className="bg-light p-1 token-container">
-                    {token || "No token"}
-                  </div>
-                </div>
-              </div>
-            </div>
+            <DebugPanel 
+              username={username}
+              playerStatus={playerStatus}
+              isPlaying={isPlaying}
+              playerError={playerError}
+              debugInfo={debugInfo}
+              stats={stats}
+              token={token}
+              copyToClipboard={copyToClipboard}
+            />
 
           </div>
         </div>

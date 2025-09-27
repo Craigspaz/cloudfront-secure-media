@@ -28,6 +28,7 @@ demo/video/source/
 
 #docs
 docs/
+test/
 
 #.gitignore
 package-lock.json
